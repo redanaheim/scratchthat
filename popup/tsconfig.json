@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "lib": ["ES2021", "DOM"],
+        "module": "ES6",
+        "target": "ES2021",
+        "allowJs": false
+    },
+    "include": [
+        "index.ts",
+        "lol.d.ts"
+    ]
+}

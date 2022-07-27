@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="./codemirror.js"></script>
+        <script src="./index.js"></script>
+        <link rel="stylesheet" href="index.css"/>
+        <link rel="stylesheet" href="codemirror.css"/>
+        <link rel="stylesheet" href="midnight.css"/>
+    </head>
+    <body class="dark">
+        <table style="padding: 10px;">
+            <tbody>
+                <tr>
+                    <td colspan="3" style="text-align: center;">
+                        <b>
+                            List of Filters (line separated)
+                        </b>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <textarea id="filters" rows="10"></textarea>
+        <button id="save" style="margin-left: auto; margin-right: auto; margin-top: 10px;">
+            Save<span id="unsaved_changes"></span>
+        </button>
+    </body>
+</html>

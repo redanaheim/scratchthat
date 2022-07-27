@@ -1,0 +1,8 @@
+.DS_Store
+example.html
+web-ext-artifacts/**/*
+.web-extension-id
+replace.js
+popup/index.js
+word_list.json
+popup/codemirror-5.65.7
