@@ -33,12 +33,22 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     const current_val = ((typeof previous_editor_value["editor_val"]) === "string") ? previous_editor_value["editor_val"] as string : ""
 
+    const update_editor_content = () => {
+        browser.storage.local.set({
+            "editor_val": view.state.sliceDoc(0)
+        }).then(() => {
+            console.log("Updated editor content...");
+        });
+    };
+
     const unsaved = () => {
-        unsaved_changes.innerText = "*";
+        unsaved_changes.classList.remove("invisible");
+        update_editor_content();
     }
 
     const saved = () => {
-        unsaved_changes.innerText = "";
+        unsaved_changes.classList.add("invisible");
+        update_editor_content();
     }
 
     const view = new EditorView({

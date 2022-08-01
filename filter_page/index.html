@@ -7,22 +7,31 @@
         <link rel="stylesheet" href="midnight.css"/>
     </head>
     <body class="dark">
-        <table style="padding: 10px;">
-            <tbody>
-                <tr>
-                    <td style="text-align: center; width: 100%;">
-                        <b>
-                            List of Filters (line separated)
-                        </b>
-                    </td>
-                    <td style="width: min-content;">
-                        <button id="save">
-                            Save<span id="unsaved_changes"></span>
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <div id="filters"></div>
+        <div class="box">    
+            <div class="box-row">
+                <table style="padding: 10px;">
+                    <tbody>
+                        <tr>
+                            <td style="text-align: center; width: 100%;">
+                                <b>
+                                    Editing 
+                                    <select id="editing">
+                                        <option>
+                                            List of Filters
+                                        </option>
+                                    </select>
+                                </b>
+                            </td>
+                            <td style="width: min-content;">
+                                <button id="save">
+                                    <span class="invisible">*</span>Save<span id="unsaved_changes">*</span>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="filters"></div>
+        </div>
     </body>
 </html>

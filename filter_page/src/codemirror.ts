@@ -43,7 +43,7 @@ export const filter_support = new LanguageSupport(filter_language, []);
 
 export const filter_diagnostics_source = (unsaved_changes: () => void) => {
     return (view: EditorView): readonly Diagnostic[] | Promise<readonly Diagnostic[]> => {
-        let lines = view.state.sliceDoc(0).split("\n");
+        const lines = view.state.sliceDoc(0).split("\n");
         let set: Diagnostic[] = [];
         unsaved_changes();
         for (let i = 0; i < lines.length; i++) {

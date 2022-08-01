@@ -467,9 +467,11 @@ const get_applicable_filters = async (url: string) => {
         log(mutations);
         mutations.forEach(mutation => {
             if (mutation.type === "childList" || mutation.type === "characterData") {
-                if (filters.length > 0) obs_check(mutation.target, observer);
-                if (mutation.type === "childList") {
-                    mutation.addedNodes.forEach(x => obs_check(x, observer));
+                if (filters.length > 0) {
+                    obs_check(mutation.target, observer);
+                    if (mutation.type === "childList") {
+                        mutation.addedNodes.forEach(x => obs_check(x, observer));
+                    }
                 }
                 if (document.location.href !== old_window_location) {
                     old_window_location = document.location.href;
@@ -483,10 +485,12 @@ const get_applicable_filters = async (url: string) => {
     });
 
     window.addEventListener("DOMContentLoaded", () => {
-        for_text_in_children(document, text_el => {
-            stop(observer);
-            text_el.textContent = fix_text(text_el.textContent);
-        });
+        if (filters.length > 0) {
+                for_text_in_children(document, text_el => {
+                stop(observer);
+                text_el.textContent = fix_text(text_el.textContent);
+            });
+        }
 
         start(observer);
     });
