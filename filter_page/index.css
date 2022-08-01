@@ -33,6 +33,13 @@ button {
     background-color: var(--bg);
 }
 
+select {
+    border: 1px solid var(--border);
+    color: var(--color);
+    background-color: var(--bg);
+    margin-left: 5px;
+}
+
 body {
     min-height: 100vh;
     overflow: hidden;
@@ -46,7 +53,8 @@ body {
 .box {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 15px);
+    height: calc(100vh - 75px);
+    max-height: calc(100vh - 75px);
 }
 
 #filters {
