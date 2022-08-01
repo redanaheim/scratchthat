@@ -3,6 +3,15 @@ example.html
 web-ext-artifacts/**/*
 .web-extension-id
 replace.js
-popup/index.js
+filter_page/index.js
 word_list.json
-popup/codemirror-5.65.7
+filter_page/codemirror-5.65.7
+Scratch That Logo.afdesign
+node_modules/
+yarn.lock
+filter_page/filter.js
+filter_page/filter.terms.js
+filter_page/bundle.js
+filter_page/bundle.js.map
+filter_page/dist/
+background.js

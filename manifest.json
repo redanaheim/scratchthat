@@ -17,9 +17,11 @@
       "storage"
     ],
     "browser_action": {
-      "default_icon": "",
+      "default_icon": "icons/scratch_that-64.png",
       "default_title": "Scratch That",
-      "default_popup": "popup/index.html",
       "browser_style": true
+    },
+    "background": {
+        "scripts": ["background.js"]
     }
   }

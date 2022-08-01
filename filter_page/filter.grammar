@@ -1,0 +1,56 @@
+@top Line { (filter | Comment) (newline (filter | Comment))* }
+
+@tokens {
+    space { @whitespace+ }
+    newline { $[\n] }
+    Comment { "#" ![\n]* }
+    DomainFragment { (@asciiLetter|@digit)+ }
+    RegexEndingEscape { "\\\\"* "\\" "/" }
+    RegexContent { ![/\n] }
+    RegexFlags { $[dimsuy]+ }
+    CommaEscape { "\\\\"* "\\" "," }
+    NotSlashComma { ![/,\n] }
+    ExactTargetContent { ![,\n] }
+    ParenEscape { "\\\\"* "\\" "(" }
+    CapGroupName { $[a-zA-Z_] $[a-zA-Z_0-9]* }
+    ListName { $[a-zA-Z0-9_]+ }
+    ListContent { ![),\n]+ }
+    NoParens { ![(\n] }
+    Digits { @digit+ }
+    AllDomains { "*" }
+    CommaSeparator { "," }
+}
+
+filter { URLSpec CommaSeparator TargetSpec CommaSeparator ReplacementSpec }
+
+URLSpec { AllDomains |  DomainName | Regex }
+
+Regex { "/" (RegexContent | RegexEndingEscape)+ "/" RegexFlags? }
+
+DomainName { DomainFragment ("." DomainFragment)+ }
+
+ExactTargetSpec { NotSlashComma (CommaEscape | ExactTargetContent)+ }
+
+TargetSpec { Regex | ExactTargetSpec }
+
+NamedCapGroup { "(" "$" CapGroupName ")" }
+
+NumberedCapGroup { "(" "$" Digits ")" }
+
+ListSeedSpec { "autogen" | Digits }
+
+ListPeriodSpec { "inst" | "min" | "hr" | "day" | "wk" }
+
+ListNameTail { ListName }
+
+ListContentTail { ListContent (CommaSeparator ListContent)+ }
+
+ListTail { ListContentTail }
+
+@skip { space } {
+    ListDescrip { ListSeedSpec CommaSeparator ListPeriodSpec CommaSeparator }
+}
+
+List { "(" ListDescrip ListTail ")" }
+
+ReplacementSpec { (NoParens | ParenEscape | List | NamedCapGroup | NumberedCapGroup)+ }

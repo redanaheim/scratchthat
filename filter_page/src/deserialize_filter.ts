@@ -1,54 +1,49 @@
-declare const browser: {
-    storage: {
-        local: {
-            get: (keys: string[] | string) => Promise<{ [key: string]: unknown }>,
-            set: (obj: { [key: string]: any }) => Promise<unknown>,
-        }
-    }
-}
-
-const enum URLSpecifierType {
+export const enum URLSpecifierType {
     All,
     DomainName,
     Regex
 }
 
-type URLSpecifier =
+export type URLSpecifier =
     | { type: URLSpecifierType.All }
     | { type: URLSpecifierType.DomainName, domain: string }
     | { type: URLSpecifierType.Regex, regex_text: string, flags: string };
 
-const enum TargetSpecifierType {
+export const enum TargetSpecifierType {
     RawText,
     Regex
 }
 
-type TargetSpecifier =
+export type TargetSpecifier =
     | { type: TargetSpecifierType.RawText, text: string }
     | { type: TargetSpecifierType.Regex, regex_text: string, flags: string };
 
-const enum ReplacementSpecifierElementType {
+export const enum ReplacementSpecifierElementType {
     List,
     CaptureGroup,
     ExactText
 }
 
-const LIST_PERIODIZATION_SPECIFIERS = ["min", "hr", "day", "wk", "inst"] as const;
+export const LIST_PERIODIZATION_SPECIFIERS = ["min", "hr", "day", "wk", "inst"] as const;
 
-type ListPeriodizationSpecifier = (typeof LIST_PERIODIZATION_SPECIFIERS)[number];
+export type ListPeriodizationSpecifier = (typeof LIST_PERIODIZATION_SPECIFIERS)[number];
 
-type CaptureGroupType = ["numbered", "named"][number];
+export type CaptureGroupType = ["numbered", "named"][number];
 
-type CaptureGroupReplacementSpecifierElement =
+export type CaptureGroupReplacementSpecifierElement =
     | { type: ReplacementSpecifierElementType.CaptureGroup, group_type: "numbered", group_number: number }
     | { type: ReplacementSpecifierElementType.CaptureGroup, group_type: "named", group_name: string };
 
-type ReplacementSpecifierElement =
+export type ListReplacementSpecifierElement = 
     | { type: ReplacementSpecifierElementType.List, periodization: ListPeriodizationSpecifier, elements: string[], seed: number | "autogen", offset: number }
+    | { type: ReplacementSpecifierElementType.List, periodization: ListPeriodizationSpecifier, name: string, seed: number | "autogen", offset: number }
+
+export type ReplacementSpecifierElement =
+    | ListReplacementSpecifierElement
     | CaptureGroupReplacementSpecifierElement
     | { type: ReplacementSpecifierElementType.ExactText, text: string };
 
-interface Filter {
+export interface Filter {
     url_specifier: URLSpecifier,
     target_specifier: TargetSpecifier,
     replacement_specifier: ReplacementSpecifierElement[]
@@ -66,12 +61,12 @@ interface Filter {
  * @returns whether the given character is escaped in the string, meaning it has a preceding backslash that isn't escaped.
  * The first character in a string is never escaped.
  */
-const is_escaped = (index: number, str: string): boolean => {
+export const is_escaped = (index: number, str: string): boolean => {
     if (index === 0) return false;
     return str[index - 1] === "\\" && !is_escaped(index - 1, str);
 }
 
-const unescape_all = (str: string): string => {
+export const unescape_all = (str: string): string => {
     let new_str = str.replaceAll(/\\n/g, "\n");
     let buf = "";
     for (let i = new_str.length - 1; i >= 0; i--) {
@@ -88,7 +83,7 @@ const unescape_all = (str: string): string => {
  * @param str
  * @param chars a set of chars to escape. backslashes will always be escaped no matter what.
  */
-const escape_chars = (str: string, chars: string): string => {
+export const escape_chars = (str: string, chars: string): string => {
     let char_set = new Set(chars.split(""));
     char_set.add("\\");
     let buf = "";
@@ -102,67 +97,12 @@ const escape_chars = (str: string, chars: string): string => {
     return buf;
 }
 
-const process_exact_replacement_text = (str: string): string => {
+export const process_exact_replacement_text = (str: string): string => {
     const escaped = escape_chars(str, ",()");
     return escaped.replaceAll(/\n/g, "\\n");
 }
 
-const serialize_filter = (filter: Filter): string => {
-    const url_spec_segment = (() => {
-        switch (filter.url_specifier.type) {
-            case URLSpecifierType.All: {
-                return "*";
-            };
-            case URLSpecifierType.DomainName: {
-                return filter.url_specifier.domain;
-            }
-            case URLSpecifierType.Regex: {
-                return `/${escape_chars(filter.url_specifier.regex_text, "/")}/${filter.url_specifier.flags}`
-            }
-        }
-    })();
-
-    const target_spec_segment = (() => {
-        switch (filter.target_specifier.type) {
-            case TargetSpecifierType.RawText: {
-                return escape_chars(filter.target_specifier.text, ",");
-            }
-            case TargetSpecifierType.Regex: {
-                return `/${escape_chars(filter.target_specifier.regex_text, "/")}/${filter.target_specifier.flags}`
-            }
-        }
-    })();
-
-    const replacement_spec_segment = (() => {
-        let buf = "";
-        for (const element of filter.replacement_specifier) {
-            switch (element.type) {
-                case ReplacementSpecifierElementType.ExactText: {
-                    buf += process_exact_replacement_text(element.text);
-                    break;
-                }
-                case ReplacementSpecifierElementType.CaptureGroup: {
-                    if (element.group_type === "named") {
-                        buf += `($${element.group_name})`;
-                    }
-                    else {
-                        buf += `($${element.group_number})`
-                    }
-                    break;
-                }
-                case ReplacementSpecifierElementType.List: {
-                    buf += `(${element.seed},${element.periodization},${element.elements.map(process_exact_replacement_text).join(",")})`;
-                    break;
-                }
-            }
-        }
-        return buf;
-    })();
-
-    return `${url_spec_segment},${target_spec_segment},${replacement_spec_segment}`;
-}
-
-const FILTER_ERRORS = [
+export const FILTER_ERRORS = [
     "EMPTY_FILTER_STRING",
     "NO_URL_SPECIFIER",
     "NO_TARGET_SPECIFIER",
@@ -171,18 +111,21 @@ const FILTER_ERRORS = [
     "ILLEGAL_DOMAIN_NAME",
     "UNTERMINATED_REGEX_SOURCE",
     "UNTERMINATED_PARENTHESES_GROUP",
-    "MALFORMED_LIST"
+    "MALFORMED_LIST",
+    "ILLEGAL_LIST_NAME",
+    "ILLEGAL_CAPTURE_GROUP_NAME",
+    "CAPTURE_GROUP_IN_REPLACEMENT_SPECIFIER_WHERE_TARGET_IS_NOT_REGEX",
 ] as const;
-type FilterErrorType = (typeof FILTER_ERRORS)[number];
-type FilterError = { type: FilterErrorType, description?: string }
+export type FilterErrorType = (typeof FILTER_ERRORS)[number];
+export type FilterError = { type: FilterErrorType, description?: string }
 
-const enum DeserializationPhase {
+export const enum DeserializationPhase {
     URLSpecifier = "URL specifier",
     TargetSpecifier = "target specifier",
     ReplacementSpecifier = "replacement specifier"
 }
 
-const deserialize_filter = (filter: string): Filter | FilterError => {
+export const deserialize_filter = (filter: string): Filter | FilterError => {
     if (filter.length === 0) return { type: "EMPTY_FILTER_STRING" };
     let buf = "";
     let regex_src_buf = "";
@@ -293,27 +236,70 @@ const deserialize_filter = (filter: string): Filter | FilterError => {
                 }
                 else if (char === ")" && inside_parens === true && !is_escaped(i, filter)) {
                     if (inside_cap_group) {
+                        const target_error: FilterError = { 
+                            type: "CAPTURE_GROUP_IN_REPLACEMENT_SPECIFIER_WHERE_TARGET_IS_NOT_REGEX",
+                            description: "parenthesised section starting with dollar sign was interpreted to be a capture group, but the target specifier was not a regex, so no captured text can be filled in."
+                        };
                         if (/^\d+$/.test(paren_buf)) {
+                            if (target_specifier.type === TargetSpecifierType.RawText) {
+                                return target_error;
+                            }
                             replacement_specifier.push({ type: ReplacementSpecifierElementType.CaptureGroup, group_type: "numbered", group_number: Number(paren_buf) });
                             paren_buf = "";
                             inside_parens = false;
                             inside_cap_group = false;
                         }
-                        else if (/^[a-z0-9_]+$/i.test(paren_buf)) {
+                        else if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(paren_buf)) {
+                            if (target_specifier.type === TargetSpecifierType.RawText) {
+                                return target_error;
+                            }
                             replacement_specifier.push({ type: ReplacementSpecifierElementType.CaptureGroup, group_type: "named", group_name: paren_buf });
                             paren_buf = "";
                             inside_parens = false;
                             inside_cap_group = false;
                         }
+                        else {
+                            return { type: "ILLEGAL_CAPTURE_GROUP_NAME", description: `Parenthesized section was interpreted to be a named capture group because it started with a "$". A valid capture group name begins with a letter or an underscore and contains only alphanumeric characters and underscores.` }
+                        }
                     }
                     else {
+                        const LIST_MESSAGE = `Parenthesised section was interpreted to be a list, as it did not begin with a dollar sign.`;
+
                         // (autogen,day,James Doe,Jimmy John,Papa Murphy)
                         const list_parts = paren_buf.split(",");
                         if (list_parts.length < 3) {
                             return { 
                                 type: "MALFORMED_LIST",
-                                description: `Parenthesised section was interpreted to be a list, as it did not begin with a dollar sign. A valid list is made up of a seed specifier (either a positive integer or "autogen"), a periodization specifier (one of "inst", "min", "hr", "day", or "wk"), and at least one element, comma separated.`
+                                description: `${LIST_MESSAGE} A valid list is made up of a seed specifier (either a positive integer or "autogen"), a periodization specifier (one of "inst", "min", "hr", "day", or "wk"), and either a name or at least two elements, comma separated.`
                             };
+                        }
+
+                        const seed = list_parts[0].trim();
+                        const periodization = list_parts[1].trim().toLowerCase();
+                        const rest = list_parts.slice(2).map(unescape_all);
+
+                        if (rest.length === 1) {
+                            const name = rest[0].trim();
+                            if (/^[a-zA-Z0-9_]+$/.test(name) === false) {
+                                return {
+                                    type: "ILLEGAL_LIST_NAME",
+                                    description: `${LIST_MESSAGE} A valid list is made up of a seed specifier (either a positive integer or "autogen"), a periodization specifier (one of "inst", "min", "hr", "day", or "wk"), and either a name or at least two elements, comma separated. A list name must be made up only of letters, numbers, and underscores.`
+                                }
+                            }
+                            else {
+
+                                replacement_specifier.push({
+                                    type: ReplacementSpecifierElementType.List,
+                                    seed: seed === "autogen" ? seed : Number(seed),
+                                    periodization: periodization as ListPeriodizationSpecifier,
+                                    name: name,
+                                    offset: 0
+                                });
+
+                                paren_buf = "";
+                                inside_parens = false;
+                                inside_cap_group = false;
+                            }
                         }
                         else {
                             const seed = list_parts[0].trim();
@@ -322,13 +308,13 @@ const deserialize_filter = (filter: string): Filter | FilterError => {
                             if (/^(?:\d+)|(?:autogen)$/.test(seed) === false) {
                                 return {
                                     type: "MALFORMED_LIST",
-                                    description: `Parenthesised section was interpreted to be a list, as it did not begin with a dollar sign. The first element of a list is a seed specifier, and must be either a positive integer or "autogen".`
+                                    description: `${LIST_MESSAGE} The first element of a list is a seed specifier, and must be either a positive integer or "autogen".`
                                 };
                             }
                             if ((LIST_PERIODIZATION_SPECIFIERS as readonly unknown[]).includes(periodization) === false) {
                                 return { 
                                     type: "MALFORMED_LIST",
-                                    description: `Parenthesised section was interpreted to be a list, as it did not begin with a dollar sign. The second element of a list is a periodization specifier, and must be one of "inst", "min", "hr", "day", or "wk".`
+                                    description: `${LIST_MESSAGE} The second element of a list is a periodization specifier, and must be one of "inst", "min", "hr", "day", or "wk".`
                                 };
                             }
 
@@ -408,33 +394,7 @@ const deserialize_filter = (filter: string): Filter | FilterError => {
     return { url_specifier: url_specifier, target_specifier: target_specifier, replacement_specifier: replacement_specifier };
 }
 
-const bind_value = async <Type extends "string" | "number">(element_id: string, property_name: string, type: Type, dfault: Type extends "string" ? string : number, trim?: boolean) => {
-    const update = async () => {
-        const val = (document.getElementById(element_id) as HTMLInputElement).value;
-        if (type === "number") {
-            await browser.storage.local.set({[property_name]: Number(val)});
-        }
-        else if (trim === true) await browser.storage.local.set({[property_name]: val.split("\n").map(x => x.trim()).join("\n")});
-        else {
-            await browser.storage.local.set({[property_name]: val });
-        }
-    }
-
-    let input = document.getElementById(element_id) as HTMLInputElement;
-    input.onchange = update;
-
-    let results = await browser.storage.local.get(property_name);
-
-    if (typeof results[property_name] !== type) {
-        input.value = dfault.toString();
-        update();
-    }
-    else {
-        input.value = results[property_name].toString();
-    }
-}
-
-const is_prime = num => {
+export const is_prime = (num: number) => {
     for (let i = 2, s = Math.sqrt(num); i <= s; i++) {
         if (num % i === 0) {
             return false;
@@ -442,107 +402,3 @@ const is_prime = num => {
     }
     return num > 1;
 }
-
-let line_widgets: Map<number, CodeMirror.LineWidget> = new Map();
-let errored_lines: Set<number> = new Set();
-
-const add_error = (line: number, filter_error: FilterError, code_mirror: CodeMirror.EditorFromTextArea) => {
-    let error = document.createElement("p");
-    error.innerText = ` ^ Error: ${filter_error.type.toLowerCase().split("_").join(" ")}${typeof filter_error.description === "string" ? ` - ${filter_error.description}` : ""}`;
-    error.classList.add("line_error")
-    let widget = code_mirror.addLineWidget(line, error);
-    if (line_widgets.has(line)) {
-        line_widgets.get(line).clear();
-    }
-    line_widgets.set(line, widget);
-    errored_lines.add(line);
-}
-
-const clear_error = (line: number, code_mirror: CodeMirror.EditorFromTextArea) => {
-    if (line_widgets.has(line)) {
-        line_widgets.get(line).clear();
-    }
-    line_widgets.delete(line);
-    errored_lines.delete(line);
-}
-
-window.addEventListener("DOMContentLoaded", async () => {
-
-    const filters_input = document.getElementById("filters") as HTMLTextAreaElement;
-
-    const previous_editor_value = await browser.storage.local.get("editor_val");
-
-    const current_val = ((typeof previous_editor_value["editor_val"]) === "string") ? previous_editor_value["editor_val"] as string : "lul"
-
-    const code_mirror = CodeMirror.fromTextArea(filters_input, {
-        theme: "midnight",
-        lineNumbers: true,
-    });
-
-    code_mirror.setValue(current_val);
-
-    // await bind_value("filters", "raw_filters", "string", "*,omw,on my way", true)
-
-    let changes_saved = true;
-
-    const save_btn = document.getElementById("save");
-    const unsaved_changes = document.getElementById("unsaved_changes");
-
-    const unsaved = () => {
-        changes_saved = false;
-        unsaved_changes.innerText = "*";
-    }
-
-    const saved = () => {
-        changes_saved = true;
-        unsaved_changes.innerText = "";
-    }
-
-    let valid_lines: Filter[] = [];
-
-    const check_lines = (lines: string[]) => {
-
-        valid_lines = [];
-
-        lines.forEach((x, index) => {
-            const line = index;
-            let res = deserialize_filter(x);
-            if ("type" in res) {
-                add_error(line, res, code_mirror);
-            }
-            else {
-                clear_error(line, code_mirror);
-                valid_lines.push(res);
-            }
-        });
-    }
-
-    check_lines(code_mirror.getValue().split("\n"));
-
-    code_mirror.on("change", async (e, change) => {
-        unsaved();
-
-        const val = code_mirror.getValue();
-
-        await browser.storage.local.set({
-            editor_val: val
-        });
-
-        let lines = val.split("\n");
-
-        check_lines(lines);
-
-        for (const line of errored_lines) {
-            if (line >= lines.length) clear_error(line, code_mirror);
-        }
-
-    })
-
-    save_btn.onclick = async () => {
-        await browser.storage.local.set({
-            filters: valid_lines
-        });
-        console.log("Saved:", valid_lines);
-        saved();
-    };
-});

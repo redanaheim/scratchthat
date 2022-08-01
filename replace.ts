@@ -1,10 +1,21 @@
-console.log("Dog");
-
 declare const browser: {
     storage: {
         local: {
-            get: (keys: string[] | string) => { [key: string]: unknown },
-            set: (obj: { [key: string]: any }) => unknown,
+            get: (keys: string[] | string) => { [key: string]: Promise<unknown> },
+            set: (obj: { [key: string]: any }) => Promise<unknown>,
+        }
+    },
+    browserAction: {
+        onClicked: {
+            addListener: (arg0: () => void) => void
+        }
+    },
+    tabs: {
+        create: (arg0: { active: boolean, url: string }) => void
+    },
+    runtime: {
+        onInstalled: {
+            addListener: (arg0: () => void) => void
         }
     }
 }
@@ -45,8 +56,12 @@ type CaptureGroupReplacementSpecifierElement =
     | { type: ReplacementSpecifierElementType.CaptureGroup, group_type: "numbered", group_number: number }
     | { type: ReplacementSpecifierElementType.CaptureGroup, group_type: "named", group_name: string };
 
-type ReplacementSpecifierElement =
+type ListReplacementSpecifierElement = 
     | { type: ReplacementSpecifierElementType.List, periodization: ListPeriodizationSpecifier, elements: string[], seed: number | "autogen", offset: number }
+    | { type: ReplacementSpecifierElementType.List, periodization: ListPeriodizationSpecifier, name: string, seed: number | "autogen", offset: number }
+
+type ReplacementSpecifierElement =
+    | ListReplacementSpecifierElement
     | CaptureGroupReplacementSpecifierElement
     | { type: ReplacementSpecifierElementType.ExactText, text: string };
 
@@ -107,61 +122,6 @@ const escape_chars = (str: string, chars: string): string => {
 const process_exact_replacement_text = (str: string): string => {
     const escaped = escape_chars(str, ",()");
     return escaped.replaceAll(/\n/g, "\\n");
-}
-
-const serialize_filter = (filter: Filter): string => {
-    const url_spec_segment = (() => {
-        switch (filter.url_specifier.type) {
-            case URLSpecifierType.All: {
-                return "*";
-            };
-            case URLSpecifierType.DomainName: {
-                return filter.url_specifier.domain;
-            }
-            case URLSpecifierType.Regex: {
-                return `/${escape_chars(filter.url_specifier.regex_text, "/")}/${filter.url_specifier.flags}`
-            }
-        }
-    })();
-
-    const target_spec_segment = (() => {
-        switch (filter.target_specifier.type) {
-            case TargetSpecifierType.RawText: {
-                return escape_chars(filter.target_specifier.text, ",");
-            }
-            case TargetSpecifierType.Regex: {
-                return `/${escape_chars(filter.target_specifier.regex_text, "/")}/${filter.target_specifier.flags}`
-            }
-        }
-    })();
-
-    const replacement_spec_segment = (() => {
-        let buf = "";
-        for (const element of filter.replacement_specifier) {
-            switch (element.type) {
-                case ReplacementSpecifierElementType.ExactText: {
-                    buf += process_exact_replacement_text(element.text);
-                    break;
-                }
-                case ReplacementSpecifierElementType.CaptureGroup: {
-                    if (element.group_type === "named") {
-                        buf += `($${element.group_name})`;
-                    }
-                    else {
-                        buf += `($${element.group_number})`
-                    }
-                    break;
-                }
-                case ReplacementSpecifierElementType.List: {
-                    buf += `(${element.seed},${element.periodization},${element.elements.map(process_exact_replacement_text).join(",")})`;
-                    break;
-                }
-            }
-        }
-        return buf;
-    })();
-
-    return `${url_spec_segment},${target_spec_segment},${replacement_spec_segment}`;
 }
 
 /*
@@ -270,65 +230,132 @@ const generate_random_index = (period: number, max_index: number, seed: number, 
     return (period_factor * seed_factor) % max_index;
 }
 
-const use_replace_filter = (filter: Filter, str: string): string => {
-    // composition of args:
-    // [...[numbered capture groups], offset, whole string, named_groups]
-    let target_regex =
-        filter.target_specifier.type === TargetSpecifierType.RawText
-            ? new RegExp(escape_reg_exp(filter.target_specifier.text), "g")
-            : new RegExp(filter.target_specifier.regex_text, filter.target_specifier.flags);
-    return str.replaceAll(target_regex, (substring: string, ...args: unknown[]): string => {
-        const number_index = args.findIndex(x => typeof x === "number");
-        const numbered_cap_groups = args.slice(0, number_index);
-        const offset = args[number_index];
-        const whole_string = args[number_index + 1];
-        const named_groups = (number_index + 2 >= args.length) ? undefined : args[number_index + 2];
+const list_cache: Map<string, string[]> = new Map();
 
-        let buf = "";
+const get_list_val = (name: string): string[] | undefined => {
+    let elements = [];
+    if (list_cache.has(name)) {
+        elements = list_cache.get(name);
+    }
+    else {
+        console.log(`scratchthat: use_replace_filter - Named list "${name}" is inaccessible because storage.local[named_lists] hasn't been cached with it yet, presumably.`);
+        return undefined;
+    }
+}
 
-        for (const element of filter.replacement_specifier) {
-            switch (element.type) {
-                case ReplacementSpecifierElementType.ExactText: {
-                    buf += element.text;
-                    break;
+const cache_list = async () => {
+    let res = await storage_get("named_lists");
+    if (typeof res !== "object") {
+        console.log(`cache_list: non-object storage.local[named_lists] -> empty list_cache`);
+        return;
+    }
+    else {
+        for (const key in (res as Record<string, string[]>)) {
+            list_cache.set(key, res[key]);
+        }
+    }
+}
+
+const apply_replacement_specifier = (element: ReplacementSpecifierElement, numbered_cap_groups: string[], named_groups: Record<string, string>): string => {
+    switch (element.type) {
+        case ReplacementSpecifierElementType.ExactText: {
+            return element.text;
+        }
+        case ReplacementSpecifierElementType.CaptureGroup: {
+            if (element.group_type === "named") {
+                if (named_groups === undefined || typeof named_groups !== "object") {
+                    console.log(`scratchthat: use_replace_filter - Named groups is undefined, so couldn't replace with text in named group ${element.group_name}.`)
+                    return "";
                 }
-                case ReplacementSpecifierElementType.CaptureGroup: {
-                    if (element.group_type === "named") {
-                        if (named_groups === undefined || typeof named_groups !== "object") {
-                            console.log(`scratchthat: use_replace_filter - Named groups is undefined, so couldn't replace with text in named group ${element.group_name}.`)
-                            break;
-                        }
-                        else if (element.group_name in named_groups) {
-                            buf += named_groups[element.group_name];
-                            break;
-                        }
-                        else {
-                            console.log(`scratchthat: use_replace_filter - Named groups is does not include key, so couldn't replace with text in named group ${element.group_name}.`)
-                            break;
-                        }
-                    }
-                    else if (element.group_type === "numbered") {
-                        if (element.group_number <= numbered_cap_groups.length) {
-                            buf += numbered_cap_groups[element.group_number - 1];
-                            break;
-                        }
-                        else {
-                            console.log(`scratchthat: use_replace_filter - There are ${numbered_cap_groups.length} numbered capture groups, but the replacement filter specifies capture group #${element.group_number}; couldn't replace with text in numbered group.`)
-                            break;
-                        }
-                    }
+                else if (element.group_name in named_groups) {
+                    return named_groups[element.group_name];
                 }
-                case ReplacementSpecifierElementType.List: {
-                    if (element.periodization === "inst") {
-                        buf += rand_el(element.elements);
-                    }
-                    else {
-                        const seed = element.seed === "autogen" ? list_seed_autogen(element.elements) : element.seed;
-                        buf += element.elements[generate_random_index(PERIOD_MAP[element.periodization], element.elements.length, seed, element.offset)];
-                    }
+                else {
+                    console.log(`scratchthat: use_replace_filter - Named groups is does not include key, so couldn't replace with text in named group ${element.group_name}.`)
+                    return "";
+                }
+            }
+            else if (element.group_type === "numbered") {
+                if (element.group_number <= numbered_cap_groups.length) {
+                    return numbered_cap_groups[element.group_number - 1];
+                }
+                else {
+                    console.log(`scratchthat: use_replace_filter - There are ${numbered_cap_groups.length} numbered capture groups, but the replacement filter specifies capture group #${element.group_number}; couldn't replace with text in numbered group.`)
+                    return "";
                 }
             }
         }
+        case ReplacementSpecifierElementType.List: {
+            let elements: string[];
+            if ("name" in element) {
+                let res = get_list_val(element.name);
+                if (res === undefined) return "";
+                else elements = res;
+            }
+            else {
+                elements = element.elements;
+            }
+            if (element.periodization === "inst") {
+                return rand_el(elements);
+            }
+            else {
+                const seed = element.seed === "autogen" ? list_seed_autogen(elements) : element.seed;
+                return elements[generate_random_index(PERIOD_MAP[element.periodization], elements.length, seed, element.offset)];
+            }
+        }
+    }
+}
+
+/**
+ * Checks if a slice of str is equal to target
+ */
+const slice_eq = (start_index: number, end_index: number, str: string, target: string): boolean => {
+    for (let i = start_index; i <= end_index; i++) {
+        if (str[i] !== target[i - start_index]) return false;
+    }
+    return true;
+}
+
+const use_replace_filter = (filter: Filter, str: string): string => {
+    // composition of args:
+    // [...[numbered capture groups], offset, whole string, named_groups]
+    if (filter.target_specifier.type === TargetSpecifierType.RawText) {
+        if (str.length < filter.target_specifier.text.length) return str;
+
+        let return_buf = "";
+        const len = filter.target_specifier.text.length;
+        for (let i = 0; i < str.length; i++) {
+            if (str.length > (i + len - 1) && slice_eq(i, i + len - 1, str, filter.target_specifier.text)) {
+                let replacement_buf = "";
+                for (const specifier of filter.replacement_specifier) {
+                    replacement_buf += apply_replacement_specifier(specifier, [], {});
+                }
+
+                return_buf += replacement_buf;
+
+                i += (len - 1);
+            }
+            else {
+                return_buf += str[i];
+            }
+        }
+        return return_buf;
+    }
+
+    let target_regex = new RegExp(filter.target_specifier.regex_text, filter.target_specifier.flags);
+    return str.replaceAll(target_regex, (substring: string, ...args: unknown[]): string => {
+        
+        const number_index = args.findIndex(x => typeof x === "number");
+        const numbered_cap_groups = args.slice(0, number_index) as string[];
+        const offset = args[number_index];
+        const whole_string = args[number_index + 1];
+        const named_groups = (number_index + 2 >= args.length) ? {} : args[number_index + 2] as Record<string, string>;
+
+        let buf = "";
+
+        filter.replacement_specifier.forEach(specifier => {
+            buf += apply_replacement_specifier(specifier, numbered_cap_groups, named_groups);
+        });
 
         return buf;
     })
@@ -342,13 +369,11 @@ const use_replace_filters = (filters: Filter[], str: string): string => {
     }
 }
 
-/**
- * @param {string} key
- */
 const storage_get = async (key: string) => {
     return (await browser.storage.local.get(key))[key];
 }
 
+// On URL reload, get all filters and selectively apply the ones that apply to this URL
 const get_applicable_filters = async (url: string) => {
     return (await storage_get("filters") as Filter[]).filter(x => {
         switch (x.url_specifier.type) {
@@ -376,6 +401,7 @@ const get_applicable_filters = async (url: string) => {
     const RANDOM_ID = Math.round(Math.random() * 65536);
 
     let filters = await get_applicable_filters(document.location.href);
+    await cache_list();
 
     /**
      * @param {string} str
@@ -408,20 +434,12 @@ const get_applicable_filters = async (url: string) => {
 
     let stopped = true;
 
-    /**
-     * @param {MutationObserver} obs
-     */
     const stop = (obs: MutationObserver) => {
         if (!stopped) {
             stopped = true;
             obs.disconnect();
         }
     }
-
-
-    /**
-     * @param {MutationObserver} obs
-     */
 
     const start = (obs: MutationObserver) => {
         if (stopped) {
@@ -430,10 +448,6 @@ const get_applicable_filters = async (url: string) => {
         }
     }
 
-    /**
-     * @param {Node} el
-     * @param {MutationObserver} obs
-     */
     const obs_check = (el: Node, obs: MutationObserver) => {
         for_text_in_children(el, text_el => {
             stop(obs);
@@ -446,13 +460,14 @@ const get_applicable_filters = async (url: string) => {
     // Re-index filters
     const on_url_change = async () => {
         filters = await get_applicable_filters(document.location.href);
+        await cache_list();
     };
 
     let observer = new MutationObserver(async mutations => {
         log(mutations);
         mutations.forEach(mutation => {
             if (mutation.type === "childList" || mutation.type === "characterData") {
-                obs_check(mutation.target, observer);
+                if (filters.length > 0) obs_check(mutation.target, observer);
                 if (mutation.type === "childList") {
                     mutation.addedNodes.forEach(x => obs_check(x, observer));
                 }

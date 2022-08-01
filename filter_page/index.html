@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="./codemirror.js"></script>
-        <script src="./index.js"></script>
+        <script src="./bundle.js"></script>
         <link rel="stylesheet" href="index.css"/>
         <link rel="stylesheet" href="codemirror.css"/>
         <link rel="stylesheet" href="midnight.css"/>
@@ -11,17 +10,19 @@
         <table style="padding: 10px;">
             <tbody>
                 <tr>
-                    <td colspan="3" style="text-align: center;">
+                    <td style="text-align: center; width: 100%;">
                         <b>
                             List of Filters (line separated)
                         </b>
                     </td>
+                    <td style="width: min-content;">
+                        <button id="save">
+                            Save<span id="unsaved_changes"></span>
+                        </button>
+                    </td>
                 </tr>
             </tbody>
         </table>
-        <textarea id="filters" rows="10"></textarea>
-        <button id="save" style="margin-left: auto; margin-right: auto; margin-top: 10px;">
-            Save<span id="unsaved_changes"></span>
-        </button>
+        <div id="filters"></div>
     </body>
 </html>
