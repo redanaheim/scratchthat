@@ -445,6 +445,7 @@ const parents_check = (predicate: (element: Node) => boolean, element: Node): bo
             if (el.textContent.trim().length === 0) {
                 return;
             }
+            // TODO: Need a better perf solution here
             else if (parent !== null && parents_check(should_continue_replacing, el.parentNode)) {
                 log(el);
                 closure(el);
