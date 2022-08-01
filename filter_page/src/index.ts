@@ -1,41 +1,19 @@
-declare const browser: {
-    storage: {
-        local: {
-            get: (keys: string[] | string) => Promise<{ [key: string]: unknown }>,
-            set: (obj: { [key: string]: any }) => Promise<unknown>,
-        }
-    }
-}
-
 import {EditorView, lineNumbers} from "@codemirror/view"
 import { filter_support, filter_diagnostics } from "./codemirror";
+import { get_valid_lines } from "./deserialize_filter";
 import { oneDark } from "./one_dark";
-import { Filter, deserialize_filter } from "./deserialize_filter"; 
+import type { Browser } from "./state";
 
-const get_valid_lines = (view: EditorView): Filter[] => {
-    const lines = view.state.sliceDoc(0).split("\n");
-    let valid: Filter[] = [];
-    for (let i = 0; i < lines.length; i++) {
-        let res = deserialize_filter(lines[i]);
-        if ("type" in res) {
-            continue;
-        }
-        else {
-            valid.push(res);
-        }
-    }
-    return valid;
-};
+declare const browser: Browser;
 
-window.addEventListener("DOMContentLoaded", async () => {
-
+const setup_filter_editor = async (element: HTMLElement) => {
     const previous_editor_value = await browser.storage.local.get("editor_val");
 
     const current_val = ((typeof previous_editor_value["editor_val"]) === "string") ? previous_editor_value["editor_val"] as string : ""
 
     const update_editor_content = () => {
         browser.storage.local.set({
-            "editor_val": view.state.sliceDoc(0)
+            editor_val: view.state.sliceDoc(0)
         }).then(() => {
             console.log("Updated editor content...");
         });
@@ -52,7 +30,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
 
     const view = new EditorView({
-        parent: document.getElementById("filters"),
+        parent: element,
         doc: current_val,
         extensions: [filter_support, filter_diagnostics(unsaved), lineNumbers(), oneDark],
     })
@@ -68,4 +46,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         console.log("Saved:", valid_lines);
         saved();
     };
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
+    await setup_filter_editor(document.getElementById("filters"));
 });

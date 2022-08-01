@@ -1,3 +1,5 @@
+type Tab = { id?: number };
+
 declare const browser: {
     storage: {
         local: {
@@ -11,7 +13,12 @@ declare const browser: {
         }
     },
     tabs: {
-        create: (arg0: { active: boolean, url: string }) => void
+        create: (arg0: { active: boolean, url: string }) => Promise<Tab>,
+        update: (arg0: number, arg1: { active: boolean }) => Promise<Tab>,
+        onRemoved: {
+            addListener: (arg0: (id: number, removeInfo: unknown) => void) => unknown,
+            removeListener: (arg0: (id: number, removeInfo: unknown) => void) => unknown
+        }
     },
     runtime: {
         onInstalled: {

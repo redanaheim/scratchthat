@@ -402,3 +402,20 @@ export const is_prime = (num: number) => {
     }
     return num > 1;
 }
+
+import { EditorView } from "@codemirror/view";
+
+export const get_valid_lines = (view: EditorView): Filter[] => {
+    const lines = view.state.sliceDoc(0).split("\n");
+    let valid: Filter[] = [];
+    for (let i = 0; i < lines.length; i++) {
+        let res = deserialize_filter(lines[i]);
+        if ("type" in res) {
+            continue;
+        }
+        else {
+            valid.push(res);
+        }
+    }
+    return valid;
+};
