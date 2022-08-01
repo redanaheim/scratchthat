@@ -397,6 +397,24 @@ const get_applicable_filters = async (url: string) => {
     })
 }
 
+const AVOIDED_TAG_NAMES = ["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS"]
+
+// Jquery stolen
+const visible = (elem: HTMLElement): boolean => {
+    return !!(elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length ) || elem.tagName === "TITLE";
+}
+
+const should_continue_replacing = (element: Node): boolean => {
+    return (element.nodeType === Node.ELEMENT_NODE && ((AVOIDED_TAG_NAMES.includes((element as HTMLElement).tagName) === false) && (element as HTMLElement).getAttribute("contenteditable") !== "true"))
+}
+
+const parents_check = (predicate: (element: Node) => boolean, element: Node): boolean => {
+    if (element.nodeName === "HTML") return true;
+    if (!predicate(element)) return false;
+    if (element.parentNode === null) return true;
+    return parents_check(predicate, element.parentNode);
+}
+
 (async () => {
 
     const LOG = true;
@@ -424,17 +442,19 @@ const get_applicable_filters = async (url: string) => {
     const for_text_in_children = (el: Node, closure: (arg0: Node) => void) => {
         if (el.nodeType === Node.TEXT_NODE) {
             const parent = el.parentNode;
-            // @ts-ignore
-            if (parent !== null && (parent.nodeType === Node.ELEMENT_NODE && (parent.tagName === "SCRIPT" || parent.tagName === "STYLE" || parent.tagName === "NOSCRIPT"))) {
+            if (el.textContent.trim().length === 0) {
                 return;
             }
-            else if (el.textContent.trim().length === 0) {
-                return;
-            }
-            else {
+            else if (parent !== null && parents_check(should_continue_replacing, el.parentNode)) {
                 log(el);
                 closure(el);
             }
+            else {
+                return;
+            }
+        }
+        else if (!should_continue_replacing(el)) {
+            return;
         }
         el.childNodes.forEach(x => for_text_in_children(x, closure));
     }
