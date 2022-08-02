@@ -14,7 +14,7 @@ type StorageKeyUnion<T extends StorageKey | StorageKey[]> = T extends StorageKey
     ? T
     : T[number];
 
-type StorageKeysResult<T extends StorageKey | StorageKey[]> = { [K in StorageKeyUnion<T>]: StorageKeyResult<K> }
+type StorageKeysResult<T extends StorageKey | StorageKey[]> = { [K in StorageKeyUnion<T>]: StorageKeyResult<K> | undefined }
 
 export type Browser = {
     storage: {
