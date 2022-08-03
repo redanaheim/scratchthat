@@ -1,13 +1,14 @@
 import { LRLanguage, LanguageSupport } from "@codemirror/language";
 import { styleTags, tags as t } from "@lezer/highlight";
-import { LRParser } from "@lezer/lr";
-import { WidgetType, Decoration, EditorView, DecorationSet, ViewPlugin, ViewUpdate } from "@codemirror/view";
-import { RangeSetBuilder, Extension } from "@codemirror/state";
-import { parser } from "../filter";
-import { linter, Diagnostic, LintSource } from "@codemirror/lint";
-import { deserialize_filter, Filter, FilterError } from "./deserialize_filter";
+import type { LRParser } from "@lezer/lr";
+import type { EditorView } from "@codemirror/view";
+import type { Extension } from "@codemirror/state";
+import { parser } from "../../filter";
+import { linter } from "@codemirror/lint";
+import type { Diagnostic } from "@codemirror/lint";
+import { deserialize_filter } from "../deserialize_filter";
 
-let parser_with_metadata = (parser as LRParser).configure({
+const parser_with_metadata = (parser as LRParser).configure({
     props: [
         styleTags({
             Regex: t.variableName,
@@ -44,16 +45,16 @@ export const filter_support = new LanguageSupport(filter_language, []);
 export const filter_diagnostics_source = (unsaved_changes: () => void) => {
     return (view: EditorView): readonly Diagnostic[] | Promise<readonly Diagnostic[]> => {
         const lines = view.state.sliceDoc(0).split("\n");
-        let set: Diagnostic[] = [];
+        const set: Diagnostic[] = [];
         unsaved_changes();
         for (let i = 0; i < lines.length; i++) {
-            let x = lines[i];
-	        let line = i + 1;
-    	    if (x.startsWith("#")) {
+            const x = lines[i];
+            const line = i + 1;
+            if (x.startsWith("#")) {
               continue;
             }
 
-            let res = deserialize_filter(x);
+            const res = deserialize_filter(x);
             if ("type" in res) {
                 const from_pos = view.state.doc.line(line).from;
                 const to_pos = view.state.doc.line(line).to;
@@ -65,7 +66,7 @@ export const filter_diagnostics_source = (unsaved_changes: () => void) => {
                     message: `${res.type.toLowerCase().split("_").join(" ")}${typeof res.description === "string" ? ` - ${res.description}` : ""}`
                 });
             }
-        };
+        }
         return set;
     }
 }

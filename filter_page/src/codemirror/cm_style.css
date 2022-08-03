@@ -1,0 +1,12 @@
+.cm-editor { 
+    height: 100%;
+    border: 1px solid grey;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.cm-gutters {
+    background-color: rgb(36,40,48) !important;
+    color: rgb(164, 156, 144);
+    border-right: 1px solid rgb(58, 62, 65) !important;
+}

@@ -20,7 +20,7 @@ browser.runtime.onInstalled.addListener(() => {
         if (tab === undefined) {
             tab = await browser.tabs.create({
                 "active": true,
-                "url": "/filter_page/index.html"
+                "url": "/filter_page/dist/index.html"
             });
             handle_update(tab.id);
         }

@@ -67,7 +67,7 @@ export const is_escaped = (index: number, str: string): boolean => {
 }
 
 export const unescape_all = (str: string): string => {
-    let new_str = str.replaceAll(/\\n/g, "\n");
+    const new_str = str.replaceAll(/\\n/g, "\n");
     let buf = "";
     for (let i = new_str.length - 1; i >= 0; i--) {
         buf = str[i] + buf;
@@ -84,7 +84,7 @@ export const unescape_all = (str: string): string => {
  * @param chars a set of chars to escape. backslashes will always be escaped no matter what.
  */
 export const escape_chars = (str: string, chars: string): string => {
-    let char_set = new Set(chars.split(""));
+    const char_set = new Set(chars.split(""));
     char_set.add("\\");
     let buf = "";
     for (let i = 0; i < str.length; i++) {
@@ -131,9 +131,9 @@ export const deserialize_filter = (filter: string): Filter | FilterError => {
     let regex_src_buf = "";
     let regex_flag_buf = "";
     let phase = DeserializationPhase.URLSpecifier as DeserializationPhase;
-    let url_specifier: URLSpecifier;
-    let target_specifier: TargetSpecifier;
-    let replacement_specifier: ReplacementSpecifierElement[] = [];
+    let url_specifier: URLSpecifier | undefined = undefined;
+    let target_specifier: TargetSpecifier | undefined = undefined;
+    const replacement_specifier: ReplacementSpecifierElement[] = [];
     let inside_slash = false;
     let inside_flags = false;
     let inside_parens = false;
@@ -241,7 +241,7 @@ export const deserialize_filter = (filter: string): Filter | FilterError => {
                             description: "parenthesised section starting with dollar sign was interpreted to be a capture group, but the target specifier was not a regex, so no captured text can be filled in."
                         };
                         if (/^\d+$/.test(paren_buf)) {
-                            if (target_specifier.type === TargetSpecifierType.RawText) {
+                            if (target_specifier !== undefined && target_specifier.type === TargetSpecifierType.RawText) {
                                 return target_error;
                             }
                             replacement_specifier.push({ type: ReplacementSpecifierElementType.CaptureGroup, group_type: "numbered", group_number: Number(paren_buf) });
@@ -250,7 +250,7 @@ export const deserialize_filter = (filter: string): Filter | FilterError => {
                             inside_cap_group = false;
                         }
                         else if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(paren_buf)) {
-                            if (target_specifier.type === TargetSpecifierType.RawText) {
+                            if (target_specifier !== undefined && target_specifier.type === TargetSpecifierType.RawText) {
                                 return target_error;
                             }
                             replacement_specifier.push({ type: ReplacementSpecifierElementType.CaptureGroup, group_type: "named", group_name: paren_buf });
@@ -390,7 +390,8 @@ export const deserialize_filter = (filter: string): Filter | FilterError => {
     if (phase !== DeserializationPhase.ReplacementSpecifier) {
         return { type: "NO_REPLACEMENT_SPECIFIER"}
     }
-    // @ts-ignore
+    if (url_specifier === undefined) return { type: "NO_URL_SPECIFIER" };
+    if (target_specifier === undefined) return { type: "NO_TARGET_SPECIFIER" };
     return { url_specifier: url_specifier, target_specifier: target_specifier, replacement_specifier: replacement_specifier };
 }
 
@@ -403,13 +404,13 @@ export const is_prime = (num: number) => {
     return num > 1;
 }
 
-import { EditorView } from "@codemirror/view";
+import type { EditorView } from "@codemirror/view";
 
 export const get_valid_lines = (view: EditorView): Filter[] => {
     const lines = view.state.sliceDoc(0).split("\n");
-    let valid: Filter[] = [];
+    const valid: Filter[] = [];
     for (let i = 0; i < lines.length; i++) {
-        let res = deserialize_filter(lines[i]);
+        const res = deserialize_filter(lines[i]);
         if ("type" in res) {
             continue;
         }
