@@ -66,11 +66,15 @@ export const is_escaped = (index: number, str: string): boolean => {
     return str[index - 1] === "\\" && !is_escaped(index - 1, str);
 }
 
+/**
+ * @param str string to go through
+ * @returns string with all escaped characters replaced with themselves
+ */
 export const unescape_all = (str: string): string => {
     const new_str = str.replaceAll(/\\n/g, "\n");
     let buf = "";
     for (let i = new_str.length - 1; i >= 0; i--) {
-        buf = str[i] + buf;
+        buf = new_str[i] + buf;
         if (is_escaped(i, new_str)) {
             i--;
         }
@@ -95,11 +99,6 @@ export const escape_chars = (str: string, chars: string): string => {
         else buf += str[i];
     }
     return buf;
-}
-
-export const process_exact_replacement_text = (str: string): string => {
-    const escaped = escape_chars(str, ",()");
-    return escaped.replaceAll(/\n/g, "\\n");
 }
 
 export const FILTER_ERRORS = [
@@ -387,7 +386,7 @@ export const deserialize_filter = (filter: string): Filter | FilterError => {
         return { type: "UNTERMINATED_PARENTHESES_GROUP", description: `Ended filter parsing in the ${phase} due to an unterminated parentheses group. Missing a closing parenthesis.`}
     }
     if (buf.length > 0) {
-        replacement_specifier.push({ type: ReplacementSpecifierElementType.ExactText, text: buf });
+        replacement_specifier.push({ type: ReplacementSpecifierElementType.ExactText, text: unescape_all(buf) });
     }
     if (phase !== DeserializationPhase.ReplacementSpecifier) {
         return { type: "NO_REPLACEMENT_SPECIFIER"}

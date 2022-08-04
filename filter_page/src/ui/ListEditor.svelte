@@ -6,6 +6,7 @@
     import { onMount } from "svelte";
     import "../codemirror/cm_style.css";
     import { except_key } from "@svelte-app/util/util";
+import { unescape_all } from "@svelte-app/deserialize_filter";
 
     let view: EditorView;
 
@@ -24,7 +25,7 @@
 
     const save = () => {
         saved_status_text = "Saving...";
-        const new_val = view.state.sliceDoc(0).split("\n");
+        const new_val = view.state.sliceDoc(0).split("\n").map(unescape_all);
         named_list_store.update(prev_val => {
             return except_key(prev_val, editing, (cur, _prev) => { cur[editing] = new_val })
         });
