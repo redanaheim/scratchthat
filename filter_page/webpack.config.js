@@ -99,6 +99,7 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "public/index.html",
       title: "Scratch That",
+      favicon: "../icons/scratch_that.ico"
     }),
     new ESLintPlugin({
       failOnError: true,
