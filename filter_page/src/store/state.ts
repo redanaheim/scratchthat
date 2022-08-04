@@ -25,7 +25,7 @@ export type Browser = {
 type UndefinedOrNull<T> = T | null | undefined;
 type UndefinedOrNullFixer<T> = (arg0: UndefinedOrNull<T>) => T;
 
-export const EDITING_FILTER = Math.round(Math.random() * (Math.pow(2, 45))).toString(36);
+export const EDITING_FILTER = "0";
 
 export const undef_or_null_default = <T>(def: T): UndefinedOrNullFixer<T> => {
     return x => {
