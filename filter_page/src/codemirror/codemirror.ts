@@ -74,3 +74,14 @@ export const filter_diagnostics_source = (unsaved_changes: () => void) => {
 export const filter_diagnostics = (unsaved_changes: () => void): Extension => {
     return linter(filter_diagnostics_source(unsaved_changes));
 }
+
+export const list_content_updates_source = (updated_callback: () => void) => {
+    return (): readonly Diagnostic[] | Promise<readonly Diagnostic[]> => {
+        updated_callback();
+        return [];
+    }
+};
+
+export const list_content_updates = (updated_callback: () => void): Extension => {
+    return linter(list_content_updates_source(updated_callback));
+};

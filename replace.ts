@@ -1,5 +1,10 @@
 type Tab = { id?: number };
 
+const LOG = true;
+const log = (...args) => {
+    if (LOG) console.log(...args);
+}
+
 declare const browser: {
     storage: {
         local: {
@@ -245,15 +250,16 @@ const get_list_val = (name: string): string[] | undefined => {
         elements = list_cache.get(name);
     }
     else {
-        console.log(`scratchthat: use_replace_filter - Named list "${name}" is inaccessible because storage.local[named_lists] hasn't been cached with it yet, presumably.`);
+        log(`scratchthat: use_replace_filter - Named list "${name}" is inaccessible because storage.local[named_lists] hasn't been cached with it yet, presumably.`);
         return undefined;
     }
+    return elements;
 }
 
 const cache_list = async () => {
     let res = await storage_get("named_lists");
     if (typeof res !== "object") {
-        console.log(`cache_list: non-object storage.local[named_lists] -> empty list_cache`);
+        log(`cache_list: non-object storage.local[named_lists] -> empty list_cache`);
         return;
     }
     else {
@@ -271,14 +277,14 @@ const apply_replacement_specifier = (element: ReplacementSpecifierElement, numbe
         case ReplacementSpecifierElementType.CaptureGroup: {
             if (element.group_type === "named") {
                 if (named_groups === undefined || typeof named_groups !== "object") {
-                    console.log(`scratchthat: use_replace_filter - Named groups is undefined, so couldn't replace with text in named group ${element.group_name}.`)
+                    log(`scratchthat: use_replace_filter - Named groups is undefined, so couldn't replace with text in named group ${element.group_name}.`)
                     return "";
                 }
                 else if (element.group_name in named_groups) {
                     return named_groups[element.group_name];
                 }
                 else {
-                    console.log(`scratchthat: use_replace_filter - Named groups is does not include key, so couldn't replace with text in named group ${element.group_name}.`)
+                    log(`scratchthat: use_replace_filter - Named groups is does not include key, so couldn't replace with text in named group ${element.group_name}.`)
                     return "";
                 }
             }
@@ -287,7 +293,7 @@ const apply_replacement_specifier = (element: ReplacementSpecifierElement, numbe
                     return numbered_cap_groups[element.group_number - 1];
                 }
                 else {
-                    console.log(`scratchthat: use_replace_filter - There are ${numbered_cap_groups.length} numbered capture groups, but the replacement filter specifies capture group #${element.group_number}; couldn't replace with text in numbered group.`)
+                    log(`scratchthat: use_replace_filter - There are ${numbered_cap_groups.length} numbered capture groups, but the replacement filter specifies capture group #${element.group_number}; couldn't replace with text in numbered group.`)
                     return "";
                 }
             }
@@ -417,12 +423,6 @@ const parents_check = (predicate: (element: Node) => boolean, element: Node): bo
 
 (async () => {
 
-    const LOG = true;
-
-    const log = (...args) => {
-        if (LOG) console.log(...args);
-    }
-
     const RANDOM_ID = Math.round(Math.random() * 65536);
 
     let filters = await get_applicable_filters(document.location.href);
@@ -504,7 +504,7 @@ const parents_check = (predicate: (element: Node) => boolean, element: Node): bo
                 if (document.location.href !== old_window_location) {
                     old_window_location = document.location.href;
                     on_url_change().then(() => {
-                        console.log("Updated filters", filters);
+                        log("Updated filters", filters);
                     });
                 }
             }

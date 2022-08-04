@@ -1,4 +1,5 @@
-import { named_list_store, EDITING_FILTER } from "./state";
+import { named_list_store, EDITING_FILTER } from "../store/state";
+import { except_key, exclude_key } from "./util";
 
 export const add_list = () => {
     named_list_store.update(prev_val => {
@@ -24,14 +25,8 @@ export const remove_list = (get_editing: () => string, set_editing: (arg0: strin
         const editing = get_editing();
         named_list_store.update(prev_val => {
             if (editing !== EDITING_FILTER && editing in prev_val) {
-                const res: Record<string, string[]> = {};
-                for (const key in prev_val) {
-                    if (key !== editing) {
-                        res[key] = prev_val[key];
-                    }
-                }
                 set_editing(EDITING_FILTER);
-                return res;
+                return exclude_key(prev_val, editing);
             }
             else {
                 console.log(`Cannot remove list - a valid list is not selected.`);
@@ -47,17 +42,8 @@ export const rename_list = (get_editing: () => string, set_editing: (arg0: strin
         let did_change = false;
         named_list_store.update(prev_val => {
             if (editing !== EDITING_FILTER && editing in prev_val) {
-                const res: Record<string, string[]> = {};
-                for (const key in prev_val) {
-                    if (key !== editing) {
-                        res[key] = prev_val[key];
-                    }
-                    else {
-                        res[new_name] = prev_val[key];
-                    }
-                }
                 did_change = true;
-                return res;
+                return except_key(prev_val, editing, (cur, prev) => { cur[new_name] = prev[editing] });
             }
             else {
                 console.log(`Cannot rename list - a valid list is not selected.`);

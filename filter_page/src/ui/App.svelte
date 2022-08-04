@@ -1,16 +1,18 @@
 <script lang="ts">
 import { LIST_NAME_REGEX } from "@svelte-app/deserialize_filter";
 
-    import { add_list, remove_list as remove_list_gen, rename_list as rename_list_gen } from "@svelte-app/store/lists";
+    import { add_list, remove_list as remove_list_gen, rename_list as rename_list_gen } from "@svelte-app/util/lists";
 
     import { EDITING_FILTER, named_list_store } from "@svelte-app/store/state";
     import EditingSelector from "./EditingSelector.svelte";
 
     import FiltersEditor from "./FiltersEditor.svelte";
     import SaveButton from "./SaveButton.svelte";
+    import ListEditor from "./ListEditor.svelte";
 
     let save_filters: (() => void);
     let has_unsaved_changes: boolean;
+    let list_save_status: string;
     let editing: string;
     let remove_list = remove_list_gen(() => editing, val => { editing = val });
     let rename_list = rename_list_gen(() => editing, val => { editing = val });
@@ -50,24 +52,21 @@ import { LIST_NAME_REGEX } from "@svelte-app/deserialize_filter";
     <table>
         <tr>
             <td class="min">
+                List:
+            </td>
+            <td class="min">
                 <button on:click={add_list}>
-                    <nobr>
-                        +
-                    </nobr>
+                    +
                 </button>
             </td>
             <td class="min">
                 <button on:click={remove_list} disabled={editing === EDITING_FILTER ? true : false}>
-                    <nobr>
-                        -
-                    </nobr>
+                    -
                 </button>
             </td>
             <td class="min">
                 <button on:click={start_renaming} disabled={editing === EDITING_FILTER ? true : false}>
-                    <nobr>
-                        Rename List
-                    </nobr>
+                    Rename
                 </button>
             </td>
             <td class="max" style="text-align: center;">
@@ -83,7 +82,12 @@ import { LIST_NAME_REGEX } from "@svelte-app/deserialize_filter";
                 {/if}
             </td>
             <td class="min">
-                <SaveButton bind:unsaved_changes={has_unsaved_changes} on:click={save_filters}></SaveButton>
+                {#if editing === EDITING_FILTER}
+                    <SaveButton bind:unsaved_changes={has_unsaved_changes} on:click={save_filters}></SaveButton>
+                {/if}
+                {#if editing !== EDITING_FILTER}
+                    <button class="save_btn">{list_save_status}</button>
+                {/if}
             </td>
         </tr>
     </table>
@@ -91,7 +95,7 @@ import { LIST_NAME_REGEX } from "@svelte-app/deserialize_filter";
         <FiltersEditor bind:save={save_filters} bind:unsaved_changes={has_unsaved_changes}></FiltersEditor>
     {/if}
     {#if editing !== EDITING_FILTER}
-        <FiltersEditor bind:save={save_filters} bind:unsaved_changes={has_unsaved_changes}></FiltersEditor>
+        <ListEditor bind:saved_status_text={list_save_status} bind:editing={editing}></ListEditor>
     {/if}
 </main>
 
