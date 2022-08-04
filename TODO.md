@@ -2,4 +2,4 @@
 
 - Add help page
 - Fix syntax highlighting in edge cases
-- Fix line break processing (LOL)
+- Check if line break escape is escaped before replacing
