@@ -5,6 +5,7 @@
   --dark-border: lightgrey;
   --light-bg: lightgrey;
   --dark-bg: black;
+  --disabled: rgb(50, 50, 50);
 }
 
 body.light {
@@ -38,6 +39,25 @@ select {
   color: var(--color);
   background-color: var(--bg);
   margin-left: 5px;
+  box-sizing: border-box;
+  height: 1.5em;
+  width: max-content;
+}
+
+input {
+  border: 1px solid var(--border);
+  border-radius: 0px;
+  color: var(--color);
+  background-color: var(--bg);
+  margin-left: 5px;
+  box-sizing: border-box;
+  height: 1.5em;
+  width: max-content;
+}
+
+button:disabled {
+  color: var(--disabled);
+  border: 1px solid var(--disabled);
 }
 
 body {

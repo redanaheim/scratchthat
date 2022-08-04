@@ -22,8 +22,16 @@ export type Browser = {
     }
 }
 
-export const un_null = <T>(val: T | null | undefined): T | undefined => {
-    return val === null ? undefined : val;
+type UndefinedOrNull<T> = T | null | undefined;
+type UndefinedOrNullFixer<T> = (arg0: UndefinedOrNull<T>) => T;
+
+export const EDITING_FILTER = Math.round(Math.random() * (Math.pow(2, 45))).toString(36);
+
+export const undef_or_null_default = <T>(def: T): UndefinedOrNullFixer<T> => {
+    return x => {
+        if (x === null || x === undefined) return def;
+        else return x;
+    }
 }
 
 /**
@@ -63,7 +71,7 @@ declare const browser: Browser;
 export const editor_val_store = await persistent_store(
     "editor_val", 
     browser, 
-    val => (val === undefined || val === null) ? "" : val,
+    undef_or_null_default<string>(""),
     // Always update the persistent value when the store value changes
     () => true
 );
@@ -71,7 +79,15 @@ export const editor_val_store = await persistent_store(
 export const filter_list_store = await persistent_store(
     "filters", 
     browser, 
-    val => (val === undefined || val === null) ? [] : val,
+    undef_or_null_default<Filter[]>([]),
     // Always update the persistent value when the store value changes
     () => true
 );
+
+export const named_list_store = await persistent_store(
+    "named_lists",
+    browser,
+    undef_or_null_default<Record<string,string[]>>({}),
+    // Always update the persistent value when the store value changes
+    () => true
+)

@@ -125,6 +125,8 @@ export const enum DeserializationPhase {
     ReplacementSpecifier = "replacement specifier"
 }
 
+export const LIST_NAME_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
 export const deserialize_filter = (filter: string): Filter | FilterError => {
     if (filter.length === 0) return { type: "EMPTY_FILTER_STRING" };
     let buf = "";
@@ -280,10 +282,10 @@ export const deserialize_filter = (filter: string): Filter | FilterError => {
 
                         if (rest.length === 1) {
                             const name = rest[0].trim();
-                            if (/^[a-zA-Z0-9_]+$/.test(name) === false) {
+                            if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name) === false) {
                                 return {
                                     type: "ILLEGAL_LIST_NAME",
-                                    description: `${LIST_MESSAGE} A valid list is made up of a seed specifier (either a positive integer or "autogen"), a periodization specifier (one of "inst", "min", "hr", "day", or "wk"), and either a name or at least two elements, comma separated. A list name must be made up only of letters, numbers, and underscores.`
+                                    description: `${LIST_MESSAGE} A valid list is made up of a seed specifier (either a positive integer or "autogen"), a periodization specifier (one of "inst", "min", "hr", "day", or "wk"), and either a name or at least two elements, comma separated. A list name must be made up only of letters, numbers, and underscores, and begin with either a letter or an underscore.`
                                 }
                             }
                             else {
