@@ -1,18 +1,25 @@
 <script lang="ts">
     import { editor_val_store, named_list_store } from "../store/state";
     import {EditorView, lineNumbers, ViewUpdate} from "@codemirror/view"
+    import { search, openSearchPanel } from "@codemirror/search";
     import { list_content_updates } from "../codemirror/codemirror";
     import { oneDark } from "../codemirror/one_dark";
     import { onMount } from "svelte";
     import "../codemirror/cm_style.css";
     import { except_key } from "@svelte-app/util/util";
-import { unescape_all } from "@svelte-app/deserialize_filter";
+    import { unescape_all } from "@svelte-app/deserialize_filter";
 
     let view: EditorView;
 
     const CM_PARENT_ID = "cm_parent_listeditor";
     let cm_parent: HTMLDivElement;
     export let editing: string;
+    
+    export const open_search_panel: () => void = () => {
+        if (view !== undefined) {
+            openSearchPanel(view);
+        }
+    };
 
     $: {
         if (view !== undefined) {
@@ -50,7 +57,15 @@ import { unescape_all } from "@svelte-app/deserialize_filter";
         return new EditorView({
             parent: cm_parent,
             doc: $named_list_store[editing_name].join("\n"),
-            extensions: [list_content_updates(save), lineNumbers(), oneDark, EditorView.updateListener.of(update_listener)],
+            extensions: [
+                list_content_updates(save), 
+                lineNumbers(), 
+                oneDark, 
+                EditorView.updateListener.of(update_listener),
+                search({
+                    top: true
+                })
+            ],
         });
     }
 

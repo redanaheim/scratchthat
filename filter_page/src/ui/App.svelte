@@ -46,6 +46,8 @@ import { LIST_NAME_REGEX } from "@svelte-app/deserialize_filter";
         renaming = false;
         rename_value = "";
     };
+
+    let search: () => void;
 </script>
 
 <main>
@@ -79,6 +81,9 @@ import { LIST_NAME_REGEX } from "@svelte-app/deserialize_filter";
                 {/if}
                 {#if renaming === false}
                     <EditingSelector bind:editing={editing}></EditingSelector>
+                    <button on:click={search}>
+                        Search
+                    </button>
                 {/if}
             </td>
             <td class="min">
@@ -92,10 +97,10 @@ import { LIST_NAME_REGEX } from "@svelte-app/deserialize_filter";
         </tr>
     </table>
     {#if editing === EDITING_FILTER}
-        <FiltersEditor bind:save={save_filters} bind:unsaved_changes={has_unsaved_changes}></FiltersEditor>
+        <FiltersEditor bind:open_search_panel={search} bind:save={save_filters} bind:unsaved_changes={has_unsaved_changes}></FiltersEditor>
     {/if}
     {#if editing !== EDITING_FILTER}
-        <ListEditor bind:saved_status_text={list_save_status} bind:editing={editing}></ListEditor>
+        <ListEditor bind:open_search_panel={search} bind:saved_status_text={list_save_status} bind:editing={editing}></ListEditor>
     {/if}
 </main>
 
