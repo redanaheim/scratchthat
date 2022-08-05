@@ -60,6 +60,6 @@ If `day` was used instead of `inst`, each day one of "Jimmy John" or "Papa Murph
 
 #### How to Edit Named Lists
 
-To make or edit a named list, open the Scratch That extension page by clicking on the button and click "+" next to "List:" in the upper left hand corner. It will bring you to an editor. Each line you type in the editor is an element of the named list which can be selected. You can rename the list you're editing using the "Rename" button and remove it using the "-" button.
+To make or edit a named list, open the Scratch That extension page by clicking on the button and click "+" next to "List:" in the upper left hand corner. Click on the dropdown menu next to "Editing" at the middle of the top of the window. Select the newly created list. It will bring you to an editor. Each line you type in the editor is an element of the named list which can be selected. You can rename the list you're editing using the "Rename" button and remove it using the "-" button.
 
 List edits will automatically save, as indicated in the top right hand corner (the filter list does not automatically save the filters, though editor content will be preserved when the tab is closed.)
