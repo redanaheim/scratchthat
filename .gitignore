@@ -16,4 +16,6 @@ filter_page/bundle.js.map
 filter_page/dist/
 filter_page/ts_dist/
 filter_page_old/
+replace/replace.js
+replace/worker.js
 background.js
