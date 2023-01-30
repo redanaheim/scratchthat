@@ -15,17 +15,15 @@ const handle_update = (id: number) => {
     browser.tabs.onRemoved.addListener(listener);
 }
 
-browser.runtime.onInstalled.addListener(() => {
-    browser.browserAction.onClicked.addListener(async () => {
-        if (tab === undefined) {
-            tab = await browser.tabs.create({
-                "active": true,
-                "url": "/filter_page/dist/index.html"
-            });
-            handle_update(tab.id);
-        }
-        else {
-            tab = await browser.tabs.update(tab.id, { active: true });
-        }
-    });
+browser.browserAction.onClicked.addListener(async () => {
+    if (tab === undefined) {
+        tab = await browser.tabs.create({
+            "active": true,
+            "url": "/filter_page/dist/index.html"
+        });
+        handle_update(tab.id);
+    }
+    else {
+        tab = await browser.tabs.update(tab.id, { active: true });
+    }
 });
