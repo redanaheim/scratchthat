@@ -408,7 +408,11 @@ const get_applicable_filters = async (url: string) => {
 const AVOIDED_TAG_NAMES = ["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS"]
 
 const should_continue_replacing = (element: Node): boolean => {
-    return (element.nodeType === Node.ELEMENT_NODE && ((AVOIDED_TAG_NAMES.includes((element as HTMLElement).tagName) === false) && ((element as HTMLElement).isContentEditable === false)))
+    return (
+        element.nodeType === Node.ELEMENT_NODE && 
+        ((AVOIDED_TAG_NAMES.includes((element as HTMLElement).tagName) === false) && 
+        ((element as HTMLElement).isContentEditable === false))
+    );
 }
 
 (async () => {
@@ -429,10 +433,16 @@ const should_continue_replacing = (element: Node): boolean => {
         text_node.textContent = fix_text(text_node.textContent);
     };
 
+    const validator = (node) => {
+        return (node === null || should_continue_replacing(node));
+    }
+
     const process_tree = (root_node) => {
+        if (validator(root_node) === false) return;
         let tree_walker = document.createTreeWalker(root_node, NodeFilter.SHOW_TEXT, {
             acceptNode: (node) => {
-                return (node.parentNode === null || should_continue_replacing(node.parentNode))
+                console.log(`scratchthat: validating`, node);
+                return validator(node.parentNode)
                     ? NodeFilter.FILTER_ACCEPT
                     : NodeFilter.FILTER_REJECT;
             },
@@ -470,9 +480,9 @@ const should_continue_replacing = (element: Node): boolean => {
     };
 
     let observer = new MutationObserver(async (mutations) => {
-        stop(observer);
 
         requestAnimationFrame(() => {
+            stop(observer);
             mutations.forEach((mutation) => {
                 if (mutation.type === "childList" || mutation.type === "characterData") {
                     if (filters.length > 0) {
@@ -480,7 +490,9 @@ const should_continue_replacing = (element: Node): boolean => {
                         if (mutation.type === "childList") {
                             mutation.addedNodes.forEach((x) => process_tree(x));
                         } else if (mutation.type === "characterData") {
-                            process_node(mutation.target);
+                            if (validator(mutation.target.parentNode) && validator(mutation.target)) {
+                                process_node(mutation.target);
+                            }
                         }
                     }
                     if (document.location.href !== old_window_location) {
@@ -491,7 +503,6 @@ const should_continue_replacing = (element: Node): boolean => {
                     }
                 }
             });
-
             start(observer);
         });
     });
