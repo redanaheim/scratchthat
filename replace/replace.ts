@@ -421,56 +421,45 @@ const should_continue_replacing = (element: Node): boolean => {
     /**
      * @param {string} str
      */
-    const fix_text = (str: string) => {
-        return use_replace_filters(filters, str)
-    }
+    const fix_text = (str) => {
+        return use_replace_filters(filters, str);
+    };
 
-    /**
-     * @param {Node} el
-     * @param {(arg0: Node) => void} closure
-     */
-    const for_text_in_children = (el: Node, closure: (arg0: Node) => void) => {
-        if (el.nodeType === Node.TEXT_NODE) {
-            const parent = el.parentNode;
-            if (el.textContent.trim().length === 0) {
-                return;
-            }
-            else if (parent !== null && should_continue_replacing(parent)) {
-                log(el);
-                closure(el);
-            }
-            else {
-                return;
-            }
+    const process_node = (text_node) => {
+        text_node.textContent = fix_text(text_node.textContent);
+    };
+
+    const process_tree = (root_node) => {
+        let tree_walker = document.createTreeWalker(root_node, NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) => {
+                return (node.parentNode === null || should_continue_replacing(node.parentNode))
+                    ? NodeFilter.FILTER_ACCEPT
+                    : NodeFilter.FILTER_REJECT;
+            },
+        });
+
+        let current_node;
+
+        while ((current_node = tree_walker.nextNode())) {
+            process_node(current_node);
         }
-        else if (!should_continue_replacing(el)) {
-            return;
-        }
-        el.childNodes.forEach(x => for_text_in_children(x, closure));
-    }
+    };
 
     let stopped = true;
 
-    const stop = (obs: MutationObserver) => {
+    const stop = (obs) => {
         if (!stopped) {
             stopped = true;
             obs.disconnect();
         }
-    }
+    };
 
-    const start = (obs: MutationObserver) => {
+    const start = (obs) => {
         if (stopped) {
             stopped = false;
             obs.observe(document, { subtree: true, childList: true, characterData: true });
         }
-    }
-
-    const obs_check = (el: Node, obs: MutationObserver) => {
-        for_text_in_children(el, text_el => {
-            stop(obs);
-            text_el.textContent = fix_text(text_el.textContent);
-        });
-    }
+    };
 
     let old_window_location = document.location.href;
 
@@ -480,33 +469,36 @@ const should_continue_replacing = (element: Node): boolean => {
         await cache_list();
     };
 
-    let observer = new MutationObserver(async mutations => {
-        log(mutations);
-        mutations.forEach(mutation => {
-            if (mutation.type === "childList" || mutation.type === "characterData") {
-                if (filters.length > 0) {
-                    obs_check(mutation.target, observer);
-                    if (mutation.type === "childList") {
-                        mutation.addedNodes.forEach(x => obs_check(x, observer));
+    let observer = new MutationObserver(async (mutations) => {
+        stop(observer);
+
+        requestAnimationFrame(() => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === "childList" || mutation.type === "characterData") {
+                    if (filters.length > 0) {
+                        process_tree(mutation.target);
+                        if (mutation.type === "childList") {
+                            mutation.addedNodes.forEach((x) => process_tree(x));
+                        } else if (mutation.type === "characterData") {
+                            process_node(mutation.target);
+                        }
+                    }
+                    if (document.location.href !== old_window_location) {
+                        old_window_location = document.location.href;
+                        on_url_change().then(() => {
+                            log("Updated filters", filters);
+                        });
                     }
                 }
-                if (document.location.href !== old_window_location) {
-                    old_window_location = document.location.href;
-                    on_url_change().then(() => {
-                        log("Updated filters", filters);
-                    });
-                }
-            }
+            });
+
+            start(observer);
         });
-        start(observer);
     });
 
     window.addEventListener("DOMContentLoaded", () => {
         if (filters.length > 0) {
-                for_text_in_children(document, text_el => {
-                stop(observer);
-                text_el.textContent = fix_text(text_el.textContent);
-            });
+            process_tree(document);
         }
 
         start(observer);
