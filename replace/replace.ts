@@ -438,7 +438,7 @@ const should_continue_replacing = (element: Node): boolean => {
     }
 
     const process_tree = (root_node) => {
-        if (validator(root_node) === false) return;
+        if (validator(root_node) === false && root_node !== document) return;
         let tree_walker = document.createTreeWalker(root_node, NodeFilter.SHOW_TEXT, {
             acceptNode: (node) => {
                 console.log(`scratchthat: validating`, node);
@@ -479,35 +479,56 @@ const should_continue_replacing = (element: Node): boolean => {
         await cache_list();
     };
 
-    let observer = new MutationObserver(async (mutations) => {
+    let queue: MutationRecord[] = [];
 
-        requestAnimationFrame(() => {
-            stop(observer);
-            mutations.forEach((mutation) => {
-                if (mutation.type === "childList" || mutation.type === "characterData") {
-                    if (filters.length > 0) {
-                        process_tree(mutation.target);
-                        if (mutation.type === "childList") {
-                            mutation.addedNodes.forEach((x) => process_tree(x));
-                        } else if (mutation.type === "characterData") {
-                            if (validator(mutation.target.parentNode) && validator(mutation.target)) {
-                                process_node(mutation.target);
+    const iterate_queue = async () => {
+        while (queue.length > 0) {
+            let mutation = queue[0];
+            // await takes longer but may be more correct
+            if (mutation.type === "childList" || mutation.type === "characterData") {
+                if (filters.length > 0) {
+                    await new Promise<void>((res, rej) => {
+                        requestAnimationFrame(() => {
+                            stop(observer);
+                            process_tree(mutation.target);
+                            if (mutation.type === "childList") {
+                                mutation.addedNodes.forEach((x) => process_tree(x));
+                            } else if (mutation.type === "characterData") {
+                                if (validator(mutation.target.parentNode) && validator(mutation.target)) {
+                                    process_node(mutation.target);
+                                }
                             }
-                        }
-                    }
-                    if (document.location.href !== old_window_location) {
-                        old_window_location = document.location.href;
-                        on_url_change().then(() => {
-                            log("Updated filters", filters);
+                            start(observer);
+                            res();
                         });
-                    }
+                    });
                 }
-            });
-            start(observer);
-        });
+                if (document.location.href !== old_window_location) {
+                    old_window_location = document.location.href;
+                    on_url_change().then(() => {
+                        log("Updated filters", filters);
+                    });
+                }
+            }
+            queue.shift();
+        }
+    }
+
+    // when observed, add a mutation to queue
+    // iterate along queue, requesting animation frames each time
+    let observer = new MutationObserver((mutations) => {
+        let call = false;
+        if (queue.length === 0) {
+            call = true;
+        }
+        queue.push(...mutations);
+        if (call) iterate_queue();
     });
 
-    window.addEventListener("DOMContentLoaded", () => {
+    
+
+    window.addEventListener("DOMContentLoaded", async () => {
+
         if (filters.length > 0) {
             process_tree(document);
         }
